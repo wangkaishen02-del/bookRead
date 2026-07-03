@@ -10,11 +10,14 @@ const themeMap = {
 const planForm = document.querySelector("#planForm");
 const plansGrid = document.querySelector("#plansGrid");
 const readingList = document.querySelector("#readingList");
+const readingListPreview = document.querySelector("#readingListPreview");
 const activePlansCount = document.querySelector("#activePlansCount");
 const finishedPlansCount = document.querySelector("#finishedPlansCount");
+const totalTasksCount = document.querySelector("#totalTasksCount");
 const openCreateBtn = document.querySelector("#openCreateBtn");
 const openReadingListBtn = document.querySelector("#openReadingListBtn");
 const openReadingListBtnAlt = document.querySelector("#openReadingListBtnAlt");
+const plansSectionBtn = document.querySelector("#plansSectionBtn");
 const closeCreateBtn = document.querySelector("#closeCreateBtn");
 const closeReadingListBtn = document.querySelector("#closeReadingListBtn");
 const cancelCreateBtn = document.querySelector("#cancelCreateBtn");
@@ -33,6 +36,7 @@ const plannerNodes = document.querySelector("#plannerNodes");
 const nodeChipList = document.querySelector("#nodeChipList");
 const nodeSummary = document.querySelector("#nodeSummary");
 const nodePositionsInput = document.querySelector("#nodePositions");
+const archiveGrid = document.querySelector("#archiveGrid");
 
 const plannerState = {
   ready: false,
@@ -51,12 +55,15 @@ render();
 totalPagesInput.addEventListener("input", syncPlannerFromInputs);
 chapterCountInput.addEventListener("input", syncPlannerFromInputs);
 openCreateBtn.addEventListener("click", () => openDrawer("create"));
-openReadingListBtn.addEventListener("click", () => openDrawer("reading"));
-openReadingListBtnAlt.addEventListener("click", () => openDrawer("reading"));
-closeCreateBtn.addEventListener("click", closeActiveDrawer);
-closeReadingListBtn.addEventListener("click", closeActiveDrawer);
-cancelCreateBtn.addEventListener("click", closeActiveDrawer);
-drawerBackdrop.addEventListener("click", closeActiveDrawer);
+openReadingListBtn?.addEventListener("click", () => openDrawer("reading"));
+openReadingListBtnAlt?.addEventListener("click", () => openDrawer("reading"));
+plansSectionBtn?.addEventListener("click", () => {
+  document.querySelector("#plansGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+closeCreateBtn?.addEventListener("click", closeActiveDrawer);
+closeReadingListBtn?.addEventListener("click", closeActiveDrawer);
+cancelCreateBtn?.addEventListener("click", closeActiveDrawer);
+drawerBackdrop?.addEventListener("click", closeActiveDrawer);
 clearNodesBtn.addEventListener("click", clearPlannerNodes);
 fillAllNodesBtn.addEventListener("click", fillAllPlannerNodes);
 
@@ -112,19 +119,27 @@ function render() {
   renderSummary();
   renderReadingList();
   renderPlanCards();
+  renderArchiveGrid();
 }
 
 function renderSummary() {
-  activePlansCount.textContent = String(plans.filter((plan) => !isPlanComplete(plan)).length);
-  finishedPlansCount.textContent = String(plans.filter((plan) => isPlanComplete(plan)).length);
+  const activePlans = plans.filter((plan) => !isPlanComplete(plan));
+  const finishedPlans = plans.filter((plan) => isPlanComplete(plan));
+  const taskCount = plans.reduce((sum, plan) => sum + plan.tasks.length, 0);
+
+  activePlansCount.textContent = String(activePlans.length);
+  finishedPlansCount.textContent = String(finishedPlans.length);
+  totalTasksCount.textContent = String(taskCount);
 }
 
 function renderReadingList() {
   readingList.innerHTML = "";
+  readingListPreview.innerHTML = "";
   const activePlans = plans.filter((plan) => !isPlanComplete(plan));
 
   if (activePlans.length === 0) {
     readingList.appendChild(createEmptyState("当前还没有正在读的书。"));
+    readingListPreview.appendChild(createEmptyState("还没有在读书目，先创建第一本吧。"));
     return;
   }
 
@@ -139,6 +154,17 @@ function renderReadingList() {
       <span class="stage-progress-badge">${getCurrentTaskProgressPercent(plan)}%</span>
     `;
     readingList.appendChild(item);
+
+    const previewItem = document.createElement("article");
+    previewItem.className = "reading-item reading-item-preview";
+    previewItem.innerHTML = `
+      <div>
+        <div class="reading-item-title">${escapeHtml(plan.title)}</div>
+        <div class="reading-item-meta">${plan.chapters.length} 章 · ${plan.tasks.length} 个小目标</div>
+      </div>
+      <span class="reading-item-percent">${getCurrentTaskProgressPercent(plan)}%</span>
+    `;
+    readingListPreview.appendChild(previewItem);
   });
 }
 
@@ -164,10 +190,11 @@ function renderPlanCards() {
     node.style.setProperty("--accent-strong", theme.strong);
     node.querySelector(".plan-theme-tag").textContent = `${theme.label} · ${plan.chapters.length} 章`;
     node.querySelector(".plan-title").textContent = plan.title;
-    node.querySelector(".plan-author").textContent = `${formatDisplayDate(plan.startDate)} 开始 · 计划 ${plan.days} 天`;
+    node.querySelector(".plan-author").textContent = `${formatDisplayDate(plan.startDate)} 开始 · 已过 ${getElapsedDays(plan.startDate)} / ${plan.days} 天`;
     node.querySelector(".plan-notes").textContent = plan.notes || "没有备注，保持轻盈开始阅读。";
-    node.querySelector(".book-progress-label").textContent = `${plan.currentPage} / ${plan.totalPages} 页`;
-    node.querySelector(".book-progress-percent").textContent = `${bookProgress}%`;
+    node.querySelector(".section-label").textContent = `整本书进度 · 共 ${plan.totalPages} 页`;
+    node.querySelector(".book-progress-label").textContent = "";
+    node.querySelector(".book-progress-percent").textContent = "";
     node.querySelector(".book-progress-fill").style.width = `${bookProgress}%`;
     renderMilestones(milestoneTrack, plan);
 
@@ -179,7 +206,7 @@ function renderPlanCards() {
 
     node.querySelector(".current-task-title").textContent = currentTask ? "当前小目标进度" : "当前小目标已完成";
     node.querySelector(".current-task-meta").textContent = currentTask
-      ? "拖动滑杆即可调整当前小目标完成度，整本书进度会自动同步。"
+      ? getCurrentTaskChapterRange(plan, currentTask)
       : "所有节点对应的小目标都已完成。";
     node.querySelector(".stage-progress-badge").textContent = `${taskProgress}%`;
     node.querySelector(".stage-progress-value").textContent = `${taskProgress}%`;
@@ -203,6 +230,34 @@ function renderPlanCards() {
     });
 
     plansGrid.appendChild(node);
+  });
+}
+
+function renderArchiveGrid() {
+  archiveGrid.innerHTML = "";
+  const finishedPlans = plans.filter((plan) => isPlanComplete(plan));
+
+  if (finishedPlans.length === 0) {
+    archiveGrid.appendChild(createEmptyState("读完的书会显示在这里，慢慢把归档区填满。"));
+    return;
+  }
+
+  finishedPlans.forEach((plan) => {
+    const theme = themeMap[plan.theme] || themeMap.amber;
+    const card = document.createElement("article");
+    card.className = "archive-card";
+    card.style.setProperty("--accent-soft", theme.soft);
+    card.style.setProperty("--accent-strong", theme.strong);
+    card.innerHTML = `
+      <p class="plan-theme-tag">${theme.label}</p>
+      <h3 class="archive-title">${escapeHtml(plan.title)}</h3>
+      <p class="archive-meta">${plan.totalPages} 页 · ${plan.chapters.length} 章 · ${plan.tasks.length} 个小目标</p>
+      <div class="archive-progress">
+        <span>完成时间轴</span>
+        <strong>${formatDisplayDate(plan.startDate)}</strong>
+      </div>
+    `;
+    archiveGrid.appendChild(card);
   });
 }
 
@@ -507,6 +562,17 @@ function getCurrentTaskProgressPercent(plan) {
   return currentTask ? clamp(Math.round(currentTask.progress || 0), 0, 100) : 100;
 }
 
+function getCurrentTaskChapterRange(plan, task) {
+  const startChapter = plan.chapters[clamp(task.startChapterIndex, 0, plan.chapters.length - 1)]?.title;
+  const endChapter = plan.chapters[clamp(task.endChapterIndex, 0, plan.chapters.length - 1)]?.title;
+
+  if (startChapter && endChapter) {
+    return `${startChapter} - ${endChapter}`;
+  }
+
+  return "当前目标章节范围";
+}
+
 function getCoveredChapterCount(chapters, startPage, endPage) {
   return chapters.filter((chapter) => chapter.endPage >= startPage && chapter.startPage <= endPage).length;
 }
@@ -607,6 +673,22 @@ function formatDisplayDate(value) {
     return value;
   }
   return `${year}.${month}.${day}`;
+}
+
+function getElapsedDays(startDate) {
+  if (!startDate) {
+    return 0;
+  }
+
+  const start = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(start.getTime())) {
+    return 0;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = today.getTime() - start.getTime();
+  return Math.max(Math.floor(diff / (1000 * 60 * 60 * 24)), 0);
 }
 
 function inferChapterStart(index, totalCount, totalPages) {
