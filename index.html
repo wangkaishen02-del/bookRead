@@ -67,7 +67,7 @@
         <div class="subpage-head">
           <div class="panel-heading">
             <h2>新建读书计划</h2>
-            <p>先选页数或章节作为单位，再用节点拆分小目标。</p>
+            <p>先录入阅读信息，再用章节轴点出你想要的小目标节点。</p>
           </div>
           <button id="closeCreateBtn" class="ghost-btn" type="button">关闭</button>
         </div>
@@ -77,30 +77,17 @@
             <input type="text" id="title" name="title" placeholder="比如：人类简史" required />
           </label>
           <label>
-            作者
-            <input type="text" id="author" name="author" placeholder="可选" />
+            备注
+            <textarea id="notes" name="notes" rows="3" placeholder="记录为什么想读这本书，或者这次阅读想抓住什么。"></textarea>
           </label>
           <div class="grid-two">
             <label>
-              总页数
+              页数
               <input type="number" id="totalPages" name="totalPages" min="1" placeholder="320" required />
             </label>
             <label>
-              目标天数
-              <input type="number" id="days" name="days" min="1" placeholder="14" required />
-            </label>
-          </div>
-          <div class="grid-two">
-            <label>
-              小目标单位
-              <select id="goalUnit" name="goalUnit">
-                <option value="pages">按页数</option>
-                <option value="chapters">按章节</option>
-              </select>
-            </label>
-            <label>
-              节点吸附精度
-              <input type="number" id="snapStep" name="snapStep" min="1" placeholder="页数模式填 20，章节模式填 1" required />
+              章节数
+              <input type="number" id="chapterCount" name="chapterCount" min="1" placeholder="12" required />
             </label>
           </div>
           <div class="grid-two">
@@ -109,7 +96,13 @@
               <input type="date" id="startDate" name="startDate" required />
             </label>
             <label>
-              封面色调
+              计划花费天数
+              <input type="number" id="days" name="days" min="1" placeholder="14" required />
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              卡片主题色
               <select id="theme" name="theme">
                 <option value="amber">琥珀黄</option>
                 <option value="teal">海盐绿</option>
@@ -118,34 +111,29 @@
               </select>
             </label>
           </div>
-          <label>
-            总章节数
-            <input type="number" id="chapterCount" name="chapterCount" min="1" placeholder="按章节模式时填写，比如 12" />
-          </label>
           <section class="planner-block">
             <div class="planner-head">
               <div>
-                <h3>节点规划</h3>
-                <p id="plannerHint">先填写页数或章节信息，然后在进度条上点击添加节点。</p>
+                <h3>章节轴</h3>
+                <p id="plannerHint">填写章节数后，这里会生成同样数量的节点。点击节点即可设为小目标节点。</p>
               </div>
-              <button id="clearNodesBtn" class="ghost-btn" type="button">清空节点</button>
+              <div class="planner-shortcuts">
+                <button id="fillAllNodesBtn" class="ghost-btn" type="button">一章一小目标</button>
+                <button id="clearNodesBtn" class="ghost-btn" type="button">清空节点</button>
+              </div>
             </div>
-            <div id="plannerScale" class="planner-scale">尚未生成节点轨道</div>
+            <div id="plannerScale" class="planner-scale">尚未生成章节轴</div>
             <div id="plannerTrack" class="planner-track">
               <div id="plannerFill" class="planner-fill"></div>
               <div id="plannerNodes" class="planner-nodes"></div>
             </div>
             <div id="nodeChipList" class="node-chip-list"></div>
             <div class="planner-actions">
-              <button id="generateTrackBtn" class="ghost-btn" type="button">生成进度条</button>
+              <span class="planner-helper">最后一个章节节点代表全书终点，会始终保留。</span>
               <span id="nodeSummary" class="node-summary">默认会按整本书生成 1 个小目标</span>
             </div>
             <input type="hidden" id="nodePositions" name="nodePositions" />
           </section>
-          <label>
-            备注
-            <textarea id="notes" name="notes" rows="3" placeholder="记录为什么想读这本书，或者想重点关注什么。"></textarea>
-          </label>
           <div class="form-actions">
             <button type="button" id="cancelCreateBtn" class="ghost-btn">取消</button>
             <button type="submit" class="primary-btn">生成计划</button>

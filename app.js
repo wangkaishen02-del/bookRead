@@ -23,13 +23,10 @@ const readingListDrawer = document.querySelector("#readingListDrawer");
 const drawerBackdrop = document.querySelector("#drawerBackdrop");
 const planCardTemplate = document.querySelector("#planCardTemplate");
 const startDateInput = document.querySelector("#startDate");
-const goalUnitInput = document.querySelector("#goalUnit");
-const snapStepInput = document.querySelector("#snapStep");
 const totalPagesInput = document.querySelector("#totalPages");
 const chapterCountInput = document.querySelector("#chapterCount");
-const generateTrackBtn = document.querySelector("#generateTrackBtn");
 const clearNodesBtn = document.querySelector("#clearNodesBtn");
-const plannerTrack = document.querySelector("#plannerTrack");
+const fillAllNodesBtn = document.querySelector("#fillAllNodesBtn");
 const plannerScale = document.querySelector("#plannerScale");
 const plannerHint = document.querySelector("#plannerHint");
 const plannerNodes = document.querySelector("#plannerNodes");
@@ -39,10 +36,7 @@ const nodePositionsInput = document.querySelector("#nodePositions");
 
 const plannerState = {
   ready: false,
-  unit: "pages",
   totalPages: 0,
-  snapStep: 1,
-  snapValues: [],
   nodeValues: [],
   chapters: [],
 };
@@ -51,21 +45,11 @@ let activeDrawer = null;
 let plans = loadPlans().map(normalizeLoadedPlan);
 
 startDateInput.value = formatDateInput(new Date());
-syncSnapHint();
 persistPlans();
 render();
 
-goalUnitInput.addEventListener("change", () => {
-  syncSnapHint();
-  resetPlanner("切换了小目标单位，请重新生成节点轨道。");
-});
-totalPagesInput.addEventListener("input", () => resetPlanner("总页数变了，请重新生成节点轨道。"));
-chapterCountInput.addEventListener("input", () => {
-  if (goalUnitInput.value === "chapters") {
-    resetPlanner("总章节数变了，请重新生成节点轨道。");
-  }
-});
-snapStepInput.addEventListener("input", () => resetPlanner("吸附精度变了，请重新生成节点轨道。"));
+totalPagesInput.addEventListener("input", syncPlannerFromInputs);
+chapterCountInput.addEventListener("input", syncPlannerFromInputs);
 openCreateBtn.addEventListener("click", () => openDrawer("create"));
 openReadingListBtn.addEventListener("click", () => openDrawer("reading"));
 openReadingListBtnAlt.addEventListener("click", () => openDrawer("reading"));
@@ -73,48 +57,41 @@ closeCreateBtn.addEventListener("click", closeActiveDrawer);
 closeReadingListBtn.addEventListener("click", closeActiveDrawer);
 cancelCreateBtn.addEventListener("click", closeActiveDrawer);
 drawerBackdrop.addEventListener("click", closeActiveDrawer);
-generateTrackBtn.addEventListener("click", generatePlannerTrack);
 clearNodesBtn.addEventListener("click", clearPlannerNodes);
-plannerTrack.addEventListener("click", handlePlannerTrackClick);
+fillAllNodesBtn.addEventListener("click", fillAllPlannerNodes);
 
 planForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const formData = new FormData(planForm);
   const title = String(formData.get("title") || "").trim();
-  const author = String(formData.get("author") || "").trim();
+  const notes = String(formData.get("notes") || "").trim();
   const totalPages = Number(formData.get("totalPages"));
   const days = Number(formData.get("days"));
-  const goalUnit = String(formData.get("goalUnit") || "pages");
-  const snapStep = Number(formData.get("snapStep"));
   const chapterCount = Number(formData.get("chapterCount"));
   const startDate = String(formData.get("startDate") || "");
   const theme = String(formData.get("theme") || "amber");
-  const notes = String(formData.get("notes") || "").trim();
 
-  if (!title || totalPages <= 0 || days <= 0 || snapStep <= 0 || !startDate) {
+  if (!title || totalPages <= 0 || days <= 0 || chapterCount <= 0 || !startDate) {
     return;
   }
 
   const chapters = buildChaptersFromCount(totalPages, chapterCount);
 
-  if (goalUnit === "chapters" && chapterCount <= 0) {
-    window.alert("按章节拆分时，请先填写总章节数。");
+  if (chapters.length === 0) {
+    window.alert("请先填写正确的页数和章节数。");
     return;
   }
 
-  if (!plannerState.ready || plannerState.totalPages !== totalPages || plannerState.unit !== goalUnit) {
-    window.alert("请先生成节点进度条，再保存这本书。");
+  if (!plannerState.ready || plannerState.totalPages !== totalPages || plannerState.chapters.length !== chapterCount) {
+    window.alert("请先生成可用的章节轴，再保存这本书。");
     return;
   }
 
   const plan = buildPlan({
     title,
-    author,
     totalPages,
     days,
-    goalUnit,
-    snapStep,
     startDate,
     theme,
     notes,
@@ -126,8 +103,7 @@ planForm.addEventListener("submit", (event) => {
   persistPlans();
   planForm.reset();
   startDateInput.value = formatDateInput(new Date());
-  syncSnapHint();
-  resetPlanner("下一本书也可以继续按节点拆分。");
+  resetPlanner("下一本书也可以继续按章节点出小目标。");
   closeActiveDrawer();
   render();
 });
@@ -186,9 +162,9 @@ function renderPlanCards() {
 
     node.style.setProperty("--accent-soft", theme.soft);
     node.style.setProperty("--accent-strong", theme.strong);
-    node.querySelector(".plan-theme-tag").textContent = `${theme.label} · ${plan.goalUnit === "pages" ? "按页数" : "按章节"}`;
+    node.querySelector(".plan-theme-tag").textContent = `${theme.label} · ${plan.chapters.length} 章`;
     node.querySelector(".plan-title").textContent = plan.title;
-    node.querySelector(".plan-author").textContent = plan.author || "作者未填写";
+    node.querySelector(".plan-author").textContent = `${formatDisplayDate(plan.startDate)} 开始 · 计划 ${plan.days} 天`;
     node.querySelector(".plan-notes").textContent = plan.notes || "没有备注，保持轻盈开始阅读。";
     node.querySelector(".book-progress-label").textContent = `${plan.currentPage} / ${plan.totalPages} 页`;
     node.querySelector(".book-progress-percent").textContent = `${bookProgress}%`;
@@ -196,9 +172,9 @@ function renderPlanCards() {
     renderMilestones(milestoneTrack, plan);
 
     node.querySelector(".plan-stats").innerHTML = `
-      <span>${plan.goalUnit === "pages" ? "按页数节点" : "按章节节点"}</span>
+      <span>${plan.chapters.length} 个章节</span>
       <span>${plan.tasks.length} 个小目标</span>
-      <span>还剩 ${Math.max(plan.totalPages - plan.currentPage, 0)} 页</span>
+      <span>已完成 ${plan.completedChapterCount} 章</span>
     `;
 
     node.querySelector(".current-task-title").textContent = currentTask ? "当前小目标进度" : "当前小目标已完成";
@@ -255,58 +231,48 @@ function closeActiveDrawer() {
   activeDrawer = null;
 }
 
-function generatePlannerTrack() {
+function syncPlannerFromInputs() {
   const totalPages = Number(totalPagesInput.value);
-  const goalUnit = goalUnitInput.value;
-  const snapStep = Math.max(Number(snapStepInput.value) || 1, 1);
   const chapterCount = Number(chapterCountInput.value);
 
-  if (totalPages <= 0) {
-    window.alert("请先填写总页数。");
+  if (totalPages <= 0 || chapterCount <= 0) {
+    resetPlanner("填写页数和章节数后，会自动生成章节轴。");
     return;
   }
 
   const chapters = buildChaptersFromCount(totalPages, chapterCount);
 
-  if (goalUnit === "chapters" && chapterCount <= 0) {
-    window.alert("按章节拆分时，请先填写总章节数。");
-    return;
-  }
-
-  const snapValues = goalUnit === "chapters"
-    ? getChapterSnapValues(chapters, totalPages)
-    : getPageSnapValues(totalPages, snapStep);
-
   plannerState.ready = true;
-  plannerState.unit = goalUnit;
   plannerState.totalPages = totalPages;
-  plannerState.snapStep = snapStep;
-  plannerState.snapValues = snapValues;
-  plannerState.nodeValues = [];
+  plannerState.nodeValues = plannerState.nodeValues.filter((value) => value > 0 && value < totalPages);
   plannerState.chapters = chapters;
-  syncPlannerUI();
-}
-
-function handlePlannerTrackClick(event) {
-  if (!plannerState.ready) {
-    return;
-  }
-
-  const rect = plannerTrack.getBoundingClientRect();
-  const ratio = clamp((event.clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
-  const rawPage = Math.round(ratio * plannerState.totalPages);
-  const snappedValue = snapPlannerValue(rawPage, plannerState.snapValues, plannerState.totalPages);
-
-  if (!snappedValue || snappedValue >= plannerState.totalPages || plannerState.nodeValues.includes(snappedValue)) {
-    return;
-  }
-
-  plannerState.nodeValues = [...plannerState.nodeValues, snappedValue].sort((a, b) => a - b);
   syncPlannerUI();
 }
 
 function clearPlannerNodes() {
   plannerState.nodeValues = [];
+  syncPlannerUI();
+}
+
+function fillAllPlannerNodes() {
+  if (!plannerState.ready) {
+    return;
+  }
+
+  plannerState.nodeValues = plannerState.chapters
+    .slice(0, -1)
+    .map((chapter) => chapter.endPage);
+  syncPlannerUI();
+}
+
+function togglePlannerNode(value) {
+  if (value >= plannerState.totalPages) {
+    return;
+  }
+
+  plannerState.nodeValues = plannerState.nodeValues.includes(value)
+    ? plannerState.nodeValues.filter((item) => item !== value)
+    : [...plannerState.nodeValues, value].sort((a, b) => a - b);
   syncPlannerUI();
 }
 
@@ -321,71 +287,65 @@ function syncPlannerUI() {
   nodeChipList.innerHTML = "";
 
   if (!plannerState.ready) {
-    plannerScale.textContent = "尚未生成节点轨道";
-    plannerHint.textContent = "先填写总页数，按章节模式时再填写总章节数，然后在进度条上点击添加节点。";
+    plannerScale.textContent = "尚未生成章节轴";
+    plannerHint.textContent = "填写页数和章节数后，会自动生成可点击的章节节点。";
     nodeSummary.textContent = "默认会按整本书生成 1 个小目标";
     return;
   }
 
-  plannerScale.textContent = plannerState.unit === "chapters"
-    ? `共 ${plannerState.chapters.length} 章 · 点击轨道按章节边界吸附`
-    : `共 ${plannerState.totalPages} 页 · 每 ${plannerState.snapStep} 页吸附一个节点`;
-  plannerHint.textContent = "节点会吸附到页数或章节边界，节点之间自动变成小目标。";
+  plannerScale.textContent = `共 ${plannerState.chapters.length} 章 · 点击任意章节节点，就能把它设成一个小目标终点`;
+  plannerHint.textContent = "例如点亮第 3 章和第 7 章，系统会自动拆成 3 段阅读任务。";
   nodeSummary.textContent = `当前 ${plannerState.nodeValues.length} 个节点，会生成 ${plannerState.nodeValues.length + 1} 个小目标`;
+  fillAllNodesBtn.disabled = plannerState.chapters.length <= 1;
 
-  plannerState.nodeValues.forEach((value, index) => {
+  plannerState.chapters.forEach((chapter, index) => {
+    const value = chapter.endPage;
+    const isEnd = index === plannerState.chapters.length - 1;
+    const isSelected = plannerState.nodeValues.includes(value);
     const dot = document.createElement("button");
     dot.type = "button";
-    dot.className = "planner-node";
+    dot.className = `planner-node${isSelected ? " is-selected" : ""}${isEnd ? " is-end" : ""}`;
     dot.style.left = `${(value / plannerState.totalPages) * 100}%`;
-    dot.title = `删除节点 ${displayPlannerValue(value)}`;
+    dot.dataset.label = `${index + 1}`;
+    dot.title = isEnd ? `第 ${index + 1} 章 · 全书终点` : `${isSelected ? "取消" : "设为"}第 ${index + 1} 章小目标`;
     dot.addEventListener("click", (event) => {
       event.stopPropagation();
-      removePlannerNode(value);
+      togglePlannerNode(value);
     });
     plannerNodes.appendChild(dot);
+  });
 
+  plannerState.nodeValues.forEach((value, index) => {
     const chip = document.createElement("div");
     chip.className = "node-chip";
     chip.innerHTML = `
-      <span>${index + 1}. ${displayPlannerValue(value)}</span>
-      <button type="button" class="ghost-btn">删除</button>
+      <span>${index + 1}. ${displayPlannerValue(value)} 设为小目标</span>
+      <button type="button" class="ghost-btn">取消</button>
     `;
     chip.querySelector("button").addEventListener("click", () => removePlannerNode(value));
     nodeChipList.appendChild(chip);
   });
-
-  const endDot = document.createElement("span");
-  endDot.className = "planner-node is-end";
-  endDot.style.left = "100%";
-  plannerNodes.appendChild(endDot);
 }
 
 function displayPlannerValue(pageValue) {
-  if (plannerState.unit === "chapters") {
-    const chapterIndex = plannerState.chapters.findIndex((chapter) => chapter.endPage === pageValue);
-    return chapterIndex >= 0 ? `第 ${chapterIndex + 1} 章` : `${pageValue} 页`;
-  }
-  return `${pageValue} 页`;
+  const chapterIndex = plannerState.chapters.findIndex((chapter) => chapter.endPage === pageValue);
+  return chapterIndex >= 0 ? `第 ${chapterIndex + 1} 章` : `${pageValue} 页`;
 }
 
-function buildPlan({ title, author, totalPages, days, goalUnit, snapStep, startDate, theme, notes, chapters, nodeValues }) {
+function buildPlan({ title, totalPages, days, startDate, theme, notes, chapters, nodeValues }) {
   const normalizedChapters = chapters.length > 0 ? chapters : buildFallbackChapters(totalPages);
   const tasks = buildTasksFromNodes({
     totalPages,
     chapters: normalizedChapters,
-    goalUnit,
     nodeValues,
   });
 
   return syncPlanFromTasks({
     id: crypto.randomUUID(),
     title,
-    author,
     totalPages,
     days,
-    goalUnit,
-    snapStep,
+    goalUnit: "chapters",
     startDate,
     theme,
     notes,
@@ -413,7 +373,6 @@ function normalizeLoadedPlan(plan) {
         buildTasksFromNodes({
           totalPages,
           chapters,
-          goalUnit: plan.goalUnit || "pages",
           nodeValues: [],
         }).map((task) => ({
           ...task,
@@ -425,15 +384,14 @@ function normalizeLoadedPlan(plan) {
 
   return syncPlanFromTasks({
     ...plan,
-    goalUnit: plan.goalUnit || "pages",
-    snapStep: Number(plan.snapStep) || Number(plan.taskSize) || 1,
+    goalUnit: "chapters",
     chapters,
     tasks: hydrateTasksFromCurrentPage(normalizedTasks, plan.currentPage || 0),
     completedChapterCount: Number.isFinite(plan.completedChapterCount) ? plan.completedChapterCount : 0,
   });
 }
 
-function buildTasksFromNodes({ totalPages, chapters, goalUnit, nodeValues }) {
+function buildTasksFromNodes({ totalPages, chapters, nodeValues }) {
   const boundaries = [...new Set(nodeValues)]
     .filter((value) => value > 0 && value < totalPages)
     .sort((a, b) => a - b);
@@ -449,7 +407,7 @@ function buildTasksFromNodes({ totalPages, chapters, goalUnit, nodeValues }) {
     tasks.push({
       id: crypto.randomUUID(),
       title: `小目标 ${index + 1}`,
-      type: goalUnit,
+      type: "chapters",
       startPage,
       endPage,
       chapterCount,
@@ -599,24 +557,6 @@ function getPageSnapValues(totalPages, snapStep) {
   return values;
 }
 
-function getChapterSnapValues(chapters, totalPages) {
-  const values = chapters.map((chapter) => clamp(chapter.endPage, 1, totalPages)).sort((a, b) => a - b);
-  if (values[values.length - 1] !== totalPages) {
-    values.push(totalPages);
-  }
-  return [...new Set(values)];
-}
-
-function snapPlannerValue(rawPage, snapValues, totalPages) {
-  if (snapValues.length === 0) {
-    return clamp(rawPage, 1, totalPages);
-  }
-
-  return snapValues.reduce((closest, value) =>
-    Math.abs(value - rawPage) < Math.abs(closest - rawPage) ? value : closest
-  );
-}
-
 function findEndChapterIndex(chapters, endPage) {
   const index = chapters.findIndex((chapter) => chapter.endPage >= endPage);
   return index >= 0 ? index : Math.max(chapters.length - 1, 0);
@@ -625,16 +565,10 @@ function findEndChapterIndex(chapters, endPage) {
 function resetPlanner(message) {
   plannerState.ready = false;
   plannerState.totalPages = 0;
-  plannerState.snapValues = [];
   plannerState.nodeValues = [];
   plannerState.chapters = [];
   plannerHint.textContent = message;
   syncPlannerUI();
-}
-
-function syncSnapHint() {
-  const isPages = goalUnitInput.value === "pages";
-  snapStepInput.placeholder = isPages ? "例如 20 页" : "例如 1 章";
 }
 
 function loadPlans() {
@@ -662,6 +596,17 @@ function formatDateInput(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDate(value) {
+  if (!value) {
+    return "今天";
+  }
+  const [year, month, day] = String(value).split("-");
+  if (!year || !month || !day) {
+    return value;
+  }
+  return `${year}.${month}.${day}`;
 }
 
 function inferChapterStart(index, totalCount, totalPages) {
