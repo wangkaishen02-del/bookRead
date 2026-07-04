@@ -1,8 +1,0 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.bookread" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- 深色模式下透明状态栏，图标使用浅色 -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-    </style>
-</resources>
