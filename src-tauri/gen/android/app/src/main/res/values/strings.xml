@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">"BookRead"</string>
+    <string name="main_activity_title">"BookRead"</string>
+</resources>

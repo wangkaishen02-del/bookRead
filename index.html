@@ -2,8 +2,8 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chapter Flow | 读书计划</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>读书计划</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,11 +14,20 @@
   </head>
   <body>
     <div class="page-shell">
-      <header class="topbar">
-        <div class="brand-block stack-sm">
-          <p class="eyebrow">Reading Planner</p>
-          <h1>Chapter Flow</h1>
-          <p class="brand-copy">把一本书拆成更轻的章节节奏，让每天推进一点点也很有成就感。</p>
+      <header class="topbar topbar-combined">
+        <div class="topbar-row">
+          <h1>读书计划</h1>
+          <div class="topbar-stats">
+            <div class="stat-cell">
+              <small>正在读</small>
+              <strong id="activePlansCount">0</strong>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="stat-cell">
+              <small>已完成</small>
+              <strong id="finishedPlansCount">0</strong>
+            </div>
+          </div>
         </div>
         <div class="topbar-actions">
           <button id="openReadingListBtnAlt" class="ghost-btn" type="button">查看书单</button>
@@ -28,57 +37,23 @@
 
       <main id="homeView" class="dashboard home-view">
         <section class="dashboard-main">
-          <section class="summary-strip">
-            <div class="stats-row">
-              <article class="stat-card">
-                <small>正在读</small>
-                <strong id="activePlansCount">0</strong>
-                <span>保持阅读中的节奏</span>
-              </article>
-              <article class="stat-card">
-                <small>已完成</small>
-                <strong id="finishedPlansCount">0</strong>
-                <span>读完的书会沉淀在归档区</span>
-              </article>
-              <article class="stat-card">
-                <small>小目标数</small>
-                <strong id="totalTasksCount">0</strong>
-                <span>用阶段任务替代模糊进度</span>
-              </article>
+          <section class="panel panel-library">
+            <div class="shelf-block">
+              <div id="plansGrid" class="plans-grid"></div>
             </div>
-          </section>
 
-          <section class="panel panel-library panel-reading">
-            <div class="panel-heading panel-heading-row">
-              <div>
-                <p class="section-tag">Active Shelf</p>
-                <button id="plansSectionBtn" class="section-link-btn" type="button">正在读的书</button>
-                <p>每张卡片聚焦两层进度：整本书推进到哪里，以及当前这一段小目标完成到哪里。</p>
+            <div class="shelf-divider"></div>
+
+            <div class="shelf-block">
+              <div class="shelf-head">
+                <p class="section-tag">Archive</p>
+                <h2 class="section-link-btn">已完成归档</h2>
               </div>
+              <div id="archiveGrid" class="archive-grid"></div>
             </div>
-            <div id="plansGrid" class="plans-grid"></div>
-          </section>
-
-          <section class="panel panel-archive">
-            <div class="panel-heading">
-              <p class="section-tag">Archive</p>
-              <h2>已完成归档</h2>
-              <p>读完的书会留在这里，方便回看自己的节奏和积累。</p>
-            </div>
-            <div id="archiveGrid" class="archive-grid"></div>
           </section>
         </section>
 
-        <aside class="dashboard-rail">
-          <section class="panel rail-panel">
-            <div class="panel-heading">
-              <p class="section-tag">In Progress</p>
-              <h2>在读书单</h2>
-              <p>快速扫一眼所有进行中的书，决定今天先读哪一本。</p>
-            </div>
-            <div id="readingListPreview" class="reading-list"></div>
-          </section>
-        </aside>
       </main>
     </div>
 
@@ -88,7 +63,6 @@
         <div class="subpage-head">
           <div class="panel-heading">
             <h2>正在读书单</h2>
-            <p>这里会列出当前所有进行中的书籍。</p>
           </div>
           <button id="closeReadingListBtn" class="ghost-btn" type="button">关闭</button>
         </div>
@@ -100,7 +74,6 @@
         <div class="subpage-head">
           <div class="panel-heading">
             <h2>新建读书计划</h2>
-            <p>先录入阅读信息，再用章节轴点出你想要的小目标节点。</p>
           </div>
           <button id="closeCreateBtn" class="ghost-btn" type="button">关闭</button>
         </div>
@@ -179,7 +152,6 @@
       <article class="plan-card">
         <div class="plan-card-top">
           <div>
-            <p class="plan-theme-tag"></p>
             <h3 class="plan-title"></h3>
             <p class="plan-author"></p>
           </div>

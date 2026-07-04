@@ -10,10 +10,8 @@ const themeMap = {
 const planForm = document.querySelector("#planForm");
 const plansGrid = document.querySelector("#plansGrid");
 const readingList = document.querySelector("#readingList");
-const readingListPreview = document.querySelector("#readingListPreview");
 const activePlansCount = document.querySelector("#activePlansCount");
 const finishedPlansCount = document.querySelector("#finishedPlansCount");
-const totalTasksCount = document.querySelector("#totalTasksCount");
 const openCreateBtn = document.querySelector("#openCreateBtn");
 const openReadingListBtn = document.querySelector("#openReadingListBtn");
 const openReadingListBtnAlt = document.querySelector("#openReadingListBtnAlt");
@@ -125,21 +123,17 @@ function render() {
 function renderSummary() {
   const activePlans = plans.filter((plan) => !isPlanComplete(plan));
   const finishedPlans = plans.filter((plan) => isPlanComplete(plan));
-  const taskCount = plans.reduce((sum, plan) => sum + plan.tasks.length, 0);
 
   activePlansCount.textContent = String(activePlans.length);
   finishedPlansCount.textContent = String(finishedPlans.length);
-  totalTasksCount.textContent = String(taskCount);
 }
 
 function renderReadingList() {
   readingList.innerHTML = "";
-  readingListPreview.innerHTML = "";
   const activePlans = plans.filter((plan) => !isPlanComplete(plan));
 
   if (activePlans.length === 0) {
     readingList.appendChild(createEmptyState("当前还没有正在读的书。"));
-    readingListPreview.appendChild(createEmptyState("还没有在读书目，先创建第一本吧。"));
     return;
   }
 
@@ -149,22 +143,11 @@ function renderReadingList() {
     item.innerHTML = `
       <div>
         <div class="reading-item-title">${escapeHtml(plan.title)}</div>
-        <div class="reading-item-meta">${plan.currentPage} / ${plan.totalPages} 页 · ${getBookProgressPercent(plan)}%</div>
+        <div class="reading-item-meta">${plan.totalPages} 页 · ${plan.chapters.length} 章</div>
       </div>
-      <span class="stage-progress-badge">${getCurrentTaskProgressPercent(plan)}%</span>
+      <span class="stage-progress-badge">${getBookProgressPercent(plan)}%</span>
     `;
     readingList.appendChild(item);
-
-    const previewItem = document.createElement("article");
-    previewItem.className = "reading-item reading-item-preview";
-    previewItem.innerHTML = `
-      <div>
-        <div class="reading-item-title">${escapeHtml(plan.title)}</div>
-        <div class="reading-item-meta">${plan.chapters.length} 章 · ${plan.tasks.length} 个小目标</div>
-      </div>
-      <span class="reading-item-percent">${getCurrentTaskProgressPercent(plan)}%</span>
-    `;
-    readingListPreview.appendChild(previewItem);
   });
 }
 
@@ -188,7 +171,6 @@ function renderPlanCards() {
 
     node.style.setProperty("--accent-soft", theme.soft);
     node.style.setProperty("--accent-strong", theme.strong);
-    node.querySelector(".plan-theme-tag").textContent = `${theme.label} · ${plan.chapters.length} 章`;
     node.querySelector(".plan-title").textContent = plan.title;
     node.querySelector(".plan-author").textContent = `${formatDisplayDate(plan.startDate)} 开始 · 已过 ${getElapsedDays(plan.startDate)} / ${plan.days} 天`;
     node.querySelector(".plan-notes").textContent = plan.notes || "没有备注，保持轻盈开始阅读。";
@@ -249,7 +231,6 @@ function renderArchiveGrid() {
     card.style.setProperty("--accent-soft", theme.soft);
     card.style.setProperty("--accent-strong", theme.strong);
     card.innerHTML = `
-      <p class="plan-theme-tag">${theme.label}</p>
       <h3 class="archive-title">${escapeHtml(plan.title)}</h3>
       <p class="archive-meta">${plan.totalPages} 页 · ${plan.chapters.length} 章 · ${plan.tasks.length} 个小目标</p>
       <div class="archive-progress">

@@ -28,6 +28,7 @@ body {
   min-height: 100vh;
   color: var(--ink);
   font-family: "Outfit", sans-serif;
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   background:
     radial-gradient(circle at top left, rgba(218, 119, 54, 0.16), transparent 24%),
     radial-gradient(circle at 85% 12%, rgba(19, 120, 97, 0.14), transparent 24%),
@@ -54,7 +55,7 @@ body::before {
 .page-shell {
   width: min(1280px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: calc(env(safe-area-inset-top, 0px) + 28px) 0 56px;
 }
 
 .topbar,
@@ -91,9 +92,71 @@ body::before {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  align-items: flex-end;
-  padding: 22px 24px;
-  margin-bottom: 18px;
+  align-items: center;
+  padding: 8px 20px 4px;
+  margin-bottom: 12px;
+}
+
+.topbar-combined {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 24px;
+}
+
+.topbar-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.topbar-row h1 {
+  margin: 0;
+}
+
+.topbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-left: auto;
+}
+
+.topbar-stats .stat-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topbar-stats small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.topbar-stats strong {
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  font-family: "Noto Serif SC", serif;
+  line-height: 1;
+}
+
+.topbar-stats .stat-divider {
+  width: 1px;
+  height: 44px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.topbar-actions {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+}
+
+.topbar-actions .ghost-btn,
+.topbar-actions .primary-btn {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
+  padding: 8px 18px;
 }
 
 .brand-copy,
@@ -148,12 +211,12 @@ h2 {
 }
 
 .summary-strip {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
@@ -178,6 +241,28 @@ h2 {
   line-height: 1;
 }
 
+.stat-card-combined {
+  padding: 22px 28px;
+}
+
+.stat-pair {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
+.stat-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 52px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.82fr);
@@ -188,15 +273,15 @@ h2 {
 .dashboard-main,
 .dashboard-rail {
   display: grid;
-  gap: 24px;
+  gap: 16px;
 }
 
 .panel {
-  padding: 28px;
+  padding: 24px;
 }
 
 .panel-heading {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .panel-heading-row {
@@ -204,6 +289,23 @@ h2 {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+}
+
+.shelf-block {
+  display: grid;
+  gap: 12px;
+}
+
+.shelf-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shelf-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
 }
 
 .section-link-btn {
@@ -555,6 +657,8 @@ button:disabled {
   border: 2px solid #d5c2ac;
   box-shadow: 0 0 0 1px rgba(126, 99, 66, 0.08);
   transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+  /* 扩大可点击区域，但不使用伪元素以免覆盖相邻节点 */
+  padding: 0;
 }
 
 .planner-node:hover:not(:disabled),
@@ -566,6 +670,7 @@ button:disabled {
   background: #fff9f1;
   border-color: #b6845e;
   box-shadow: 0 0 0 6px rgba(182, 132, 94, 0.12);
+  z-index: 2;
 }
 
 .planner-node::after {
@@ -578,13 +683,6 @@ button:disabled {
   font-size: 0.72rem;
   color: var(--muted);
   pointer-events: none;
-}
-
-.planner-node::before {
-  content: "";
-  position: absolute;
-  inset: -14px;
-  border-radius: 999px;
 }
 
 .planner-node:focus-visible {
@@ -709,7 +807,7 @@ button:disabled {
 .drawer-panel {
   width: 100%;
   height: 100%;
-  padding: 28px 24px 32px;
+  padding: calc(env(safe-area-inset-top, 0px) + 28px) 24px 32px;
   border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
   background: var(--surface-strong);
   overflow-y: auto;
@@ -740,12 +838,31 @@ button:disabled {
 @media (max-width: 760px) {
   .page-shell {
     width: min(100% - 20px, 1280px);
-    padding-top: 20px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
   }
 
-  .topbar,
+  .topbar {
+    padding: 8px 16px 4px;
+  }
+
   .panel {
     padding: 20px;
+  }
+
+  .topbar-combined {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  .topbar-row {
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .topbar-stats {
+    justify-content: center;
+    gap: 24px;
   }
 
   .topbar,
@@ -780,6 +897,6 @@ button:disabled {
   }
 
   .drawer-panel {
-    padding: 20px 16px 24px;
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 16px 24px;
   }
 }
