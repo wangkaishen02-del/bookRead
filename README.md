@@ -1,33 +1,31 @@
 # BookRead
 
-BookRead is a macOS reading planner app built with Tauri 2 and a lightweight HTML/CSS/JS frontend.
+BookRead is now a Flutter-based reading planner focused on Android development.
 
-## Development
+## Stack
 
-Prerequisites:
+- Flutter 3.44+
+- Android Studio / Android Emulator
 
-- Node.js 22+
-- Rust toolchain
-- Xcode Command Line Tools
+## Run
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the app in development mode:
+If Flutter is already on your `PATH`:
 
 ```bash
-npm run tauri:dev
+flutter pub get
+flutter run
 ```
 
-## Build macOS App
-
-Build a macOS `.app` bundle and `.dmg` package:
+If you are using the temporary SDK installed during this migration:
 
 ```bash
-npm run tauri:build
+/private/tmp/flutter/bin/flutter pub get
+/private/tmp/flutter/bin/flutter run
 ```
 
-Build artifacts will be generated under `src-tauri/target/release/bundle/`.
+## Project Goal
+
+- Add books quickly with only title, total pages, chapter count, and planned days
+- Break reading into stable chapter stages
+- Adjust current stage progress with the whole-book progress synced automatically
+- Use a simpler and more mainstream Android development workflow
